@@ -21,7 +21,7 @@ class ModeHandler
         uint32_t warmWhite;
         uint32_t color;
         uint8_t valInOut;
-        int mode;
+        uint8_t mode;
         Adafruit_NeoPixel ledStripe;
 
     public:
@@ -33,14 +33,15 @@ class ModeHandler
         void on();
         void off();
         
-        void setMode(int mode);
         void nextMode();
         void handleMode();
 
         void setColor(uint32_t color);
         void setColor(uint8_t r, uint8_t g, uint8_t b);
         uint32_t getColor();
-
+        void setMode(uint8_t mode);
+        uint8_t getMode();
+        
         void setWarmWhite();
         void setMonochrome();
         void setRainbow();
