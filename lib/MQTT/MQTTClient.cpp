@@ -4,22 +4,22 @@
  */
 
 /**
- * MQTT Subscriber Class
+ * MQTT Client Class
  * 
- * creates MQTT subscribing Client
+ * creates MQTT Client for publishing and subscribing
  */
 
 /***************************************************
  * includes
  ***************************************************/
-#include "MQTTSubscriber.h"
+#include "MQTTClient.h"
 
 
 /***************************************************
  * Implementation class objects
  ***************************************************/
-WiFiClient wifiSubClient;
-PubSubClient subClient(wifiSubClient);
+WiFiClient wifiClient;
+PubSubClient mqttClient(wifiClient);
 
 
 /***************************************************
@@ -29,9 +29,11 @@ PubSubClient subClient(wifiSubClient);
  ***************************************************/
 const String topics[] = 
 {
-    TOPIC_BALKON_LED,
-    TOPIC_BALKON_TEMP,
-    TOPIC_BEDROOM_LED
+    TOPIC_BALKON_LEDS_STATE,
+    TOPIC_BALKON_LEDS_BRIGHTNESS,
+    TOPIC_BALKON_LEDS_COLOR,
+    TOPIC_BALKON_LEDS_RANGE_MIN,
+    TOPIC_BALKON_LEDS_RANGE_MAX
 };
 
 #define NUM_TOPICS       (sizeof(topics) / sizeof(topics[0]))
@@ -48,17 +50,13 @@ void callback(char* topic, byte* payload, unsigned int length){
         Serial.print((char)payload[i]);
     }
     Serial.println();
-
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(250);
-    digitalWrite(LED_BUILTIN, HIGH);
 }
 
 
 /***************************************************
  * Constructor
  ***************************************************/
-MQTTSubscriber::MQTTSubscriber(String clientId, uint8_t qos){
+MQTTClient::MQTTClient(String clientId, uint8_t qos){
     this->clientId = clientId;
     this->qos = qos;
 }
@@ -66,26 +64,25 @@ MQTTSubscriber::MQTTSubscriber(String clientId, uint8_t qos){
 /***************************************************
  * Init + Update
  ***************************************************/
-void MQTTSubscriber::init(){
-    pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
+void MQTTClient::init(){
     Serial.begin(115200);
     setupWiFi();
-    subClient.setServer(MQTT_SERVER, 1883);
-    subClient.setCallback(callback);
+    mqttClient.setServer(MQTT_SERVER, 1883);
+    mqttClient.setCallback(callback);
 }
 
-void MQTTSubscriber::update(){
-    if (!subClient.connected()) {
+void MQTTClient::update(){
+    if (!mqttClient.connected()) {
       reconnect();
     }
-    subClient.loop();
+    mqttClient.loop();
 }
 
 
 /***************************************************
  * Wifi
  ***************************************************/
-void MQTTSubscriber::setupWiFi(){
+void MQTTClient::setupWiFi(){
     delay(10);
     // We start by connecting to a WiFi network
     Serial.println();
@@ -108,27 +105,27 @@ void MQTTSubscriber::setupWiFi(){
     Serial.println(WiFi.localIP());
 }  
 
-void MQTTSubscriber::reconnect(){
+void MQTTClient::reconnect(){
     // Loop until we're reconnected
-  while (!subClient.connected()) {
-    Serial.print("Attempting MQTT Subscribe connection...");
-   
-    // Attempt to connect
-    if (subClient.connect(clientId.c_str())) {
-      Serial.println("Subsrciber connected!");
+    while (!mqttClient.connected()) {
+      Serial.print("Attempting MQTT Subscribe connection...");
+    
+      // Attempt to connect
+      if (mqttClient.connect(clientId.c_str())) {
+        Serial.println("Subsrciber connected!");
 
-      // resubscribe
-      for (int i = 0; i<NUM_TOPICS; i++){
-          subClient.subscribe(topics[i].c_str(), qos);
+        // resubscribe
+        for (int i = 0; i<NUM_TOPICS; i++){
+            mqttClient.subscribe(topics[i].c_str(), qos);
+        }
+        
+      } else {
+        Serial.print("failed, rc=");
+        Serial.print(mqttClient.state());
+        Serial.println(" try again in 5 seconds");
+
+        // Wait 5 seconds before retrying
+        delay(5000);
       }
-      
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(subClient.state());
-      Serial.println(" try again in 5 seconds");
-
-      // Wait 5 seconds before retrying
-      delay(5000);
-    }
   }
 }

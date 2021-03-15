@@ -6,13 +6,13 @@
 class Button
 {
 private:
-    int pin;
+    uint16_t pin;
     bool oldState;
     bool posEdge;
     bool negEdge;
 
 public:
-    Button(int pin);
+    Button(uint16_t pin);
 
     void init();
     void update();

@@ -19,7 +19,7 @@
 /***************************************************
  * Constructor
  ***************************************************/
-Button::Button(int pin)
+Button::Button(uint16_t pin)
 {
     this->pin = pin;
     oldState = false;
@@ -32,7 +32,6 @@ Button::Button(int pin)
  ***************************************************/
 void Button::init()
 {
-    Serial.begin(115200);
     pinMode(pin, INPUT);
 }
 

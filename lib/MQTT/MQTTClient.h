@@ -6,14 +6,14 @@
 
 #include "mqttData.h"
 
-class MQTTSubscriber 
+class MQTTClient 
 {
     private:
         String clientId;
         uint8_t qos;
 
     public:
-        MQTTSubscriber(String clientId, uint8_t qos);
+        MQTTClient(String clientId, uint8_t qos);
         
         void init();
         void update();
