@@ -1,6 +1,6 @@
 // WiFi setup
-#define WLAN_SSID                   "WLAN Haspel"
-#define WLAN_PASSWORD               "Haspel59alp0209"
+#define WLAN_SSID                   "WG RiBuHa"
+#define WLAN_PASSWORD               "MaViSi92!"
 
 // MQTT setup
 #define MQTT_SERVER                 "192.168.0.169"         
@@ -14,3 +14,4 @@ const char *clientId = "NodeMCU-PubSub";
 #define TOPIC_BALKON_LEDS_COLOR             "balkon/leds/color"
 #define TOPIC_BALKON_LEDS_RANGE_MIN         "balkon/leds/range/min"
 #define TOPIC_BALKON_LEDS_RANGE_MAX         "balkon/leds/range/max"
+#define TOPIC_BALKON_LEDS_STATUS            "balkon/leds/status"

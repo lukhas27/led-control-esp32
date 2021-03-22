@@ -13,30 +13,29 @@
  * includes
  ***************************************************/
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 
 #include <Adafruit_NeoPixel.h>
 #include <PubSubClient.h>
 
 #include "Button.h"
-#include "Led.h"
 #include "LedStripeModi.h"
 #include "mqttData.h"
 
+#define BUTTON_PIN 34 // Pin for Button
 
-#define BUTTON_PIN          D6                  // Pin for Button
-
-#define LEDS_PIN            D4                  // Pin for Led Stripe
-#define NUMBER_LEDS         30                  // Number of LEDs in Led Stripe
+#define LEDS_PIN 19    // Pin for Led Stripe
+#define NUMBER_LEDS 30 // Number of LEDs in Led Stripe
 
 /***************************************************
  * Declaration of Methods
  ***************************************************/
-void callback(char* topic, byte* payload, unsigned int length);
+void callback(char *topic, byte *payload, unsigned int length);
+void publish(String payload, String topic);
+void publishBytes(byte *bytes, String topic);
 void setupWiFi();
-void reconnect(); 
+void reconnect();
 void handleButton();
-
 
 /***************************************************
  * Implementation class objects
@@ -52,21 +51,26 @@ PubSubClient mqttClient(MQTT_SERVER, MQTT_PORT, callback, wifiClient);
 bool turnedOff = false;
 int now;
 
+/***************************************************
+ * Implementation of static IP address
+ ***************************************************/
+/* IPAddress localIP(192, 168, 0, 158); // Set Static IP address
+IPAddress gateway(192, 168, 0, 1);   // Set Gateway IP address
+IPAddress subnet(255, 255, 255, 0);  // Set Subnet Mask */
 
 /***************************************************
  * Implementation of MQTT topics
  ***************************************************/
-const String topics[] = 
-{
-    TOPIC_BALKON_LEDS_STATE,
-    TOPIC_BALKON_LEDS_BRIGHTNESS,
-    TOPIC_BALKON_LEDS_COLOR,
-    TOPIC_BALKON_LEDS_RANGE_MIN,
-    TOPIC_BALKON_LEDS_RANGE_MAX
-};
+const String topics[] =
+    {
+        TOPIC_BALKON_LEDS_STATE,
+        TOPIC_BALKON_LEDS_BRIGHTNESS,
+        TOPIC_BALKON_LEDS_COLOR,
+        TOPIC_BALKON_LEDS_RANGE_MIN,
+        TOPIC_BALKON_LEDS_RANGE_MAX,
+        TOPIC_BALKON_LEDS_STATUS};
 
-#define NUM_TOPICS       (sizeof(topics) / sizeof(topics[0]))
-
+#define NUM_TOPICS (sizeof(topics) / sizeof(topics[0]))
 
 /***************************************************
  * Setup + Loop
@@ -78,118 +82,265 @@ void setup()
     // Wifi setup
     setupWiFi();
 
-    /* button.init();
-    ledStripe.init(); */
+    // Inits
+    button.init();
+    ledStripe.init();
 }
 
 void loop()
 {
     // mqtt connection handle and loop call
-    if (!mqttClient.connected()) {
-      reconnect();
+    if (!mqttClient.connected())
+    {
+        reconnect();
     }
     mqttClient.loop();
 
-
-    /* // Handles
+    // Handles
     handleButton();
 
-    
     // Updates
     button.update();
-    ledStripe.update(); */
+    ledStripe.update();
 }
 
 /***************************************************
  * MQTT Methods
  ***************************************************/
 // Callback
-void callback(char* topic, byte* payload, unsigned int length){
+void callback(char *topic, byte *payload, unsigned int length)
+{
+    // Print arrived Message with topic
     Serial.print("Message arrived [");
     Serial.print(topic);
     Serial.print("]:\t");
-    for (unsigned int i = 0; i < length; i++) {
+    for (unsigned int i = 0; i < length; i++)
+    {
         Serial.print((char)payload[i]);
     }
     Serial.println();
+
+    // Buffer for payload
+    char plBuffer[length + 1];
+    strncpy(plBuffer, (char *)payload, length + 1);
+    plBuffer[length] = '\0';
+
+    // Control LED state
+    if (strcmp(topic, TOPIC_BALKON_LEDS_STATE) == 0)
+    {
+        if (strcmp(plBuffer, "on") == 0)
+        {
+            ledStripe.on();
+        }
+        else
+        {
+            ledStripe.off();
+        }
+    }
+
+    // Control LED brightness
+    if (strcmp(topic, TOPIC_BALKON_LEDS_BRIGHTNESS) == 0)
+    {
+        int brightness = atoi(plBuffer);
+        ledStripe.setBrightness(map(brightness, 0, 100, 0, 255));
+    }
+
+    // Control LED color
+    if (strcmp(topic, TOPIC_BALKON_LEDS_COLOR) == 0)
+    {
+        char hexBuffer[length + 3];
+
+        for (int i = 0; i < length + 3; i++)
+        {
+            hexBuffer[i + 2] = plBuffer[i];
+        }
+        hexBuffer[0] = '0';
+        hexBuffer[1] = 'x';
+        hexBuffer[length + 2] = '\0';
+        uint32_t intBuffer = (uint32_t)strtol(hexBuffer, NULL, 16);
+        ledStripe.setColor(intBuffer);
+    }
+
+    // Control LED range minimum
+    if (strcmp(topic, TOPIC_BALKON_LEDS_RANGE_MIN) == 0)
+    {
+        int rangeMin = atoi(plBuffer);
+        ledStripe.setLedRangeMin(rangeMin);
+    }
+
+    // Control LED range maximum
+    if (strcmp(topic, TOPIC_BALKON_LEDS_RANGE_MAX) == 0)
+    {
+        int rangeMax = atoi(plBuffer);
+        ledStripe.setLedRangeMax(rangeMax);
+    }
+
+    // check status
+    if (strcmp(topic, TOPIC_BALKON_LEDS_STATUS) == 0)
+    {
+        // publish  actual state of LEDs
+        if (ledStripe.getState())
+        {
+            publish("on", TOPIC_BALKON_LEDS_STATE);
+        }
+        else
+        {
+            publish("off", TOPIC_BALKON_LEDS_STATE);
+        }
+
+        // publish  actual brightness of LEDs
+        uint8_t brightness = map(ledStripe.getBrightness(), 0, 255, 0, 100);
+        publish((String)brightness, TOPIC_BALKON_LEDS_BRIGHTNESS);
+        
+       
+
+        // publish  actual color of LEDs
+
+        publish(String(ledStripe.getColor(), HEX), TOPIC_BALKON_LEDS_COLOR);
+
+        // publish  actual range minimum of LEDs
+        publish((String)ledStripe.getRangeMin(), TOPIC_BALKON_LEDS_RANGE_MIN);
+
+        // publish  actual range maximum of LEDs
+        publish((String)ledStripe.getRangeMax(), TOPIC_BALKON_LEDS_RANGE_MAX);
+    }
 }
 
+void publish(String payload, String topic)
+{
+    if (mqttClient.publish(topic.c_str(), payload.c_str()))
+    {
+        Serial.print("Message published [");
+        Serial.print(topic.c_str());
+        Serial.print("]:\t");
+        Serial.println(payload.c_str());
+    }
+    else
+    {
+        Serial.print("Publishing failed [");
+        Serial.print(topic.c_str());
+        Serial.println("]");
+    }
+}
+
+void publishBytes(byte *bytes, String topic)
+{
+    if (mqttClient.publish(topic.c_str(), (const char *)bytes))
+    {
+        Serial.print("Message published [");
+        Serial.print(topic.c_str());
+        Serial.print("]:\t");
+        Serial.println((char *)bytes);
+    }
+    else
+    {
+        Serial.print("Publishing failed [");
+        Serial.print(topic.c_str());
+        Serial.print("]");
+    }
+}
 
 /***************************************************
  * WiFi
  ***************************************************/
-void setupWiFi(){
+void setupWiFi()
+{
     delay(10);
+
+    /* // Configures static IP address
+    if (!WiFi.config(localIP, gateway, subnet))
+    {
+        Serial.println("STA Failed to configure");
+    } */
+
     // We start by connecting to a WiFi network
     Serial.println();
     Serial.print("Connecting to ");
     Serial.println(WLAN_SSID);
 
     WiFi.mode(WIFI_STA);
+    WiFi.disconnect();
     WiFi.begin(WLAN_SSID, WLAN_PASSWORD);
 
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
+    int n = 0;
+
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(50);
+        Serial.println("Connecting.. status: " + String(WiFi.status()));
+        
+        if (n == 3){
+            ESP.restart();
+        }
+        
+        n++;
     }
 
-    randomSeed(micros());
-
     Serial.println("");
-    Serial.println("WiFi connected");
+    Serial.println("WiFi connected!");
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
 }
 
-void reconnect(){
+void reconnect()
+{
     // Loop until we're reconnected
-    while (!mqttClient.connected()) {
-      Serial.print("Attempting MQTT connection...");
-    
-      // Attempt to connect
-      if (mqttClient.connect(clientId)) {
-        Serial.println("Client connected!");
+    while (!mqttClient.connected())
+    {
+        Serial.print("Attempting MQTT connection...");
 
-        // resubscribe
-        for (int i = 0; i<NUM_TOPICS; i++){
-            mqttClient.subscribe(topics[i].c_str());
+        // Attempt to connect
+        if (mqttClient.connect(clientId))
+        {
+            Serial.println("Client connected!");
+
+            // resubscribe
+            for (int i = 0; i < NUM_TOPICS; i++)
+            {
+                mqttClient.subscribe(topics[i].c_str());
+            }
         }
-      } 
-      else {
-        Serial.print("failed, rc=");
-        Serial.print(mqttClient.state());
-        Serial.println(" try again in 5 seconds");
+        else
+        {
+            Serial.print("failed, rc=");
+            Serial.print(mqttClient.state());
+            Serial.println(" try again in 5 seconds");
 
-        // Wait 5 seconds before retrying
-        delay(5000);
-      }
+            // Wait 5 seconds before retrying
+            delay(5000);
+        }
     }
 }
-
 
 /***************************************************
  * Button Methods
  ***************************************************/
-void handleButton(){
-    if (button.getPosEdge()){
+void handleButton()
+{
+    if (button.getPosEdge())
+    {
         now = millis();
     }
 
-    if (button.getState()){
-        if ((millis() - now) > 2000){
+    if (button.getState())
+    {
+        if ((millis() - now) > 2000)
+        {
             ledStripe.off();
             turnedOff = true;
         }
     }
 
-    if (button.getNegEdge()){
-        if (ledStripe.getState()){
+    if (button.getNegEdge())
+    {
+        if (ledStripe.getState())
+        {
             ledStripe.nextMode();
         }
-        if (!turnedOff){
+        if (!turnedOff)
+        {
             ledStripe.on();
         }
         turnedOff = false;
     }
 }
-
