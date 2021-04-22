@@ -20,24 +20,22 @@
  ***************************************************/
 #include "LedStripeModi.h"
 
-const uint32_t warmWhite = 0x5a5755; // rgb value (90, 87, 85)
-
 /***************************************************
  * Constructor
  ***************************************************/
 LedStripeModi::LedStripeModi(uint16_t numberLeds, uint16_t pin)
 {
-    Adafruit_NeoPixel ledStripe(numberLeds, pin, NEO_GRB + NEO_KHZ800);
+    Adafruit_NeoPixel ledStripe(numberLeds, pin, NEO_GRBW + NEO_KHZ800);
     this->ledStripe = ledStripe;
 
     state = false; // set Leds off
 
-    setColor(0, 0, 255); // set default color green
+    setColor(0, 255, 0, 0); // set default color green
 
     brightness = 100; // equals 80% brightness
 
-    rangeMin = 0;          // default range:
-    rangeMax = numberLeds-1; // [0 ... (Number of LEDs)]
+    rangeMin = 0;              // default range:
+    rangeMax = numberLeds - numberLeds / 2; // [0 ... (Number of LEDs)]
 
     mode = 0; // set default mode to WARM_WHITE
 
@@ -65,18 +63,18 @@ void LedStripeModi::update()
 {
     if (state)
     {
-        if (rangeChanged()){
-            ledStripe.clear(); // clear LEDs if range changed
-        }
-    
+        //if (rangeChanged()){
+        ledStripe.clear(); // clear LEDs if range changed
+        //}
+
         ledStripe.setBrightness(brightness); // set Brightness if changed
-        
+
         handleModi();
     }
-    else{
+    else
+    {
         ledStripe.clear();
     }
-        
 
     ledStripe.show(); // show updated LEDs
 }
@@ -126,16 +124,16 @@ void LedStripeModi::nextMode()
 
 void LedStripeModi::setWarmWhite()
 {
-    for (int i = rangeMin; i < rangeMax; i++)
+    for (int i = rangeMin; i < (rangeMax + 1); i++)
     {
-        ledStripe.setPixelColor(i, warmWhite);
+        ledStripe.setPixelColor(i, 0, 0, 0, 255);
     }
 }
 
 void LedStripeModi::setMonochrome()
 {
 
-    for (int i = rangeMin; i < rangeMax; i++)
+    for (int i = rangeMin; i < (rangeMax + 1); i++)
     {
         ledStripe.setPixelColor(i, color);
     }
@@ -143,9 +141,9 @@ void LedStripeModi::setMonochrome()
 
 void LedStripeModi::setRainbow()
 {
-    for (int i = rangeMin; i < rangeMax; i++)
+    for (int i = rangeMin; i < (rangeMax + 1); i++)
     {
-        uint32_t color = ledStripe.ColorHSV(millis() * speedfactor + (65535 / (rangeMax + rangeMin)) * i, 255, 100);
+        uint32_t color = ledStripe.ColorHSV(millis() * speedfactor + (65535 / (rangeMax - rangeMin)) * i, 255, 100);
         ledStripe.setPixelColor(i, color);
     }
 }

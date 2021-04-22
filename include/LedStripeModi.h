@@ -57,10 +57,10 @@ public:
         this->colorOld = this->color;
         this->color = color;
     };
-    void setColor(uint8_t r, uint8_t g, uint8_t b)
+    void setColor(uint8_t r, uint8_t g, uint8_t b, uint8_t w)
     {
         this->colorOld = this->color;
-        this->color = ledStripe.Color(r, g, b);
+        this->color = ledStripe.Color(r, g, b, w);
     };
     uint32_t getColor() { return color; };
     void setBrightness(uint8_t brightness) { this->brightness = brightness; };
@@ -85,6 +85,77 @@ public:
     uint8_t getMode() { return mode; };
     void setSpeedfactor(uint8_t speedfactor) { this->speedfactor = speedfactor; };
     uint8_t getSpeedfactor() { return speedfactor; };
+
+    String getColorHexString()
+    {
+        // hex Format: FFFFFF  String: FFFFFF\0
+        char hexBuffer[8];
+
+        String hexString = String(this->color, HEX);
+        Serial.println(color);
+
+        switch (hexString.length())
+        {
+        case 1:
+            for (int i = 0; i < 5; i++)
+            {
+                hexBuffer[i] = 0;
+            }
+            hexBuffer[5] = hexString[0];
+            break;
+
+        case 2:
+            for (int i = 0; i < 4; i++)
+            {
+                hexBuffer[i] = 0;
+            }
+            for (int i = 4; i < 4 + hexString.length(); i++)
+            {
+                hexBuffer[i] = hexString[i - 4];
+            }
+            break;
+
+        case 3:
+            for (int i = 0; i < 3; i++)
+            {
+                hexBuffer[i] = 0;
+            }
+            for (int i = 3; i < 3 + hexString.length(); i++)
+            {
+                hexBuffer[i] = hexString[i - 3];
+            }
+            break;
+
+        case 4:
+            for (int i = 0; i < 2; i++)
+            {
+                hexBuffer[i] = 0;
+            }
+            for (int i = 2; i < 2 + hexString.length(); i++)
+            {
+                hexBuffer[i] = hexString[i - 2];
+            }
+            break;
+
+        case 5:
+            hexBuffer[0] = 0;
+            for (int i = 1; i < 1 + hexString.length(); i++)
+            {
+                hexBuffer[i] = hexString[i - 1];
+                break;
+            }
+
+        case 6:
+            for (int i = 0; i < 1 + hexString.length(); i++)
+            {
+                hexBuffer[i] = hexString[i];
+            }
+            break;
+        }
+
+        hexBuffer[7] = '\0';
+        return hexBuffer;
+    };
 
     void on();
     void off();

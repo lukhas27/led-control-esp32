@@ -50,6 +50,7 @@ PubSubClient mqttClient(MQTT_SERVER, MQTT_PORT, callback, wifiClient);
  ***************************************************/
 bool turnedOff = false;
 int now;
+uint8_t halfRange = NUMBER_LEDS / 2;
 
 /***************************************************
  * Implementation of static IP address
@@ -66,8 +67,9 @@ const String topics[] =
         TOPIC_BALKON_LEDS_STATE,
         TOPIC_BALKON_LEDS_BRIGHTNESS,
         TOPIC_BALKON_LEDS_COLOR,
-        TOPIC_BALKON_LEDS_RANGE_MIN,
-        TOPIC_BALKON_LEDS_RANGE_MAX,
+        TOPIC_BALKON_LEDS_MODE,
+        TOPIC_BALKON_LEDS_RANGE,
+        TOPIC_BALKON_LEDS_SPEEDFACTOR,
         TOPIC_BALKON_LEDS_STATUS};
 
 #define NUM_TOPICS (sizeof(topics) / sizeof(topics[0]))
@@ -161,24 +163,39 @@ void callback(char *topic, byte *payload, unsigned int length)
         ledStripe.setColor(intBuffer);
     }
 
-    // Control LED range minimum
-    if (strcmp(topic, TOPIC_BALKON_LEDS_RANGE_MIN) == 0)
+    // Control LED modi
+    if (strcmp(topic, TOPIC_BALKON_LEDS_MODE) == 0)
     {
-        int rangeMin = atoi(plBuffer);
-        ledStripe.setLedRangeMin(rangeMin);
+        int mode = atoi(plBuffer);
+        ledStripe.setMode(mode);
     }
 
-    // Control LED range maximum
-    if (strcmp(topic, TOPIC_BALKON_LEDS_RANGE_MAX) == 0)
+    // Control LED range
+    if (strcmp(topic, TOPIC_BALKON_LEDS_RANGE) == 0)
     {
-        int rangeMax = atoi(plBuffer);
-        ledStripe.setLedRangeMax(rangeMax);
+        int range = atoi(plBuffer);
+        ledStripe.setLedRangeMin(halfRange - range);
+        if (NUMBER_LEDS % 2 == 0)
+        {
+            ledStripe.setLedRangeMax(halfRange + range - 1);
+        }
+        else
+        {
+            ledStripe.setLedRangeMax(halfRange + range);
+        }
+    }
+
+    // Control LED speedfactor
+    if (strcmp(topic, TOPIC_BALKON_LEDS_SPEEDFACTOR) == 0)
+    {
+        int speedfactor = atoi(plBuffer);
+        ledStripe.setSpeedfactor(speedfactor);
     }
 
     // check status
     if (strcmp(topic, TOPIC_BALKON_LEDS_STATUS) == 0)
     {
-        // publish  actual state of LEDs
+        // publish actual state of LEDs
         if (ledStripe.getState())
         {
             publish("on", TOPIC_BALKON_LEDS_STATE);
@@ -188,21 +205,28 @@ void callback(char *topic, byte *payload, unsigned int length)
             publish("off", TOPIC_BALKON_LEDS_STATE);
         }
 
-        // publish  actual brightness of LEDs
+        // publish actual brightness of LEDs
         uint8_t brightness = map(ledStripe.getBrightness(), 0, 255, 0, 100);
         publish((String)brightness, TOPIC_BALKON_LEDS_BRIGHTNESS);
-        
-       
 
-        // publish  actual color of LEDs
+        // publish actual color of LEDs
+        publish(ledStripe.getColorHexString(), TOPIC_BALKON_LEDS_COLOR);
 
-        publish(String(ledStripe.getColor(), HEX), TOPIC_BALKON_LEDS_COLOR);
+        // publish actual mode of LEDs
+        publish(String(ledStripe.getMode()), TOPIC_BALKON_LEDS_MODE);
 
-        // publish  actual range minimum of LEDs
-        publish((String)ledStripe.getRangeMin(), TOPIC_BALKON_LEDS_RANGE_MIN);
+        // publish actual range of LEDs
+        if (NUMBER_LEDS % 2 == 0)
+        {
+            publish((String)(ledStripe.getRangeMax() - halfRange + 1), TOPIC_BALKON_LEDS_RANGE);
+        }
+        else
+        {
+            publish((String)(ledStripe.getRangeMax() - halfRange), TOPIC_BALKON_LEDS_RANGE);
+        }
 
-        // publish  actual range maximum of LEDs
-        publish((String)ledStripe.getRangeMax(), TOPIC_BALKON_LEDS_RANGE_MAX);
+        // publish actual speedfactor of LEDs
+        publish((String)ledStripe.getSpeedfactor(), TOPIC_BALKON_LEDS_SPEEDFACTOR);
     }
 }
 
@@ -268,11 +292,12 @@ void setupWiFi()
     {
         delay(50);
         Serial.println("Connecting.. status: " + String(WiFi.status()));
-        
-        if (n == 3){
+
+        if (n == 3)
+        {
             ESP.restart();
         }
-        
+
         n++;
     }
 
@@ -313,7 +338,7 @@ void reconnect()
 }
 
 /***************************************************
- * Button Methods
+ * Methods
  ***************************************************/
 void handleButton()
 {
@@ -327,6 +352,7 @@ void handleButton()
         if ((millis() - now) > 2000)
         {
             ledStripe.off();
+            publish("off", TOPIC_BALKON_LEDS_STATE);
             turnedOff = true;
         }
     }
@@ -336,10 +362,12 @@ void handleButton()
         if (ledStripe.getState())
         {
             ledStripe.nextMode();
+            publish(String(ledStripe.getMode()), TOPIC_BALKON_LEDS_MODE);
         }
         if (!turnedOff)
         {
             ledStripe.on();
+            publish("on", TOPIC_BALKON_LEDS_STATE);
         }
         turnedOff = false;
     }
