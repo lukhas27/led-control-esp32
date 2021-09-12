@@ -22,15 +22,20 @@
 #include "LedStripeModi.h"
 #include "mqttData.h"
 
-#define BUTTON_PIN 34 // Pin for Button
+/***************************************************
+ * Pins
+ ***************************************************/
+#define BUTTON_PIN 34    // Pin for Button
+#define LEDSTRIPE_PIN 27 // Pin for Led Stripe
+#define LED_MQTT_PIN 25  // Pin for MQTT LED
 
-#define LEDS_PIN 19    // Pin for Led Stripe
-#define NUMBER_LEDS 30 // Number of LEDs in Led Stripe
+#define NUMBER_LEDS 33 // Number of LEDs in Led Stripe
 
 /***************************************************
  * Declaration of Methods
  ***************************************************/
 void callback(char *topic, byte *payload, unsigned int length);
+void handleMQTTConnection();
 void publish(String payload, String topic);
 void publishBytes(byte *bytes, String topic);
 void setupWiFi();
@@ -41,7 +46,8 @@ void handleButton();
  * Implementation class objects
  ***************************************************/
 Button button(BUTTON_PIN);
-LedStripeModi ledStripe(NUMBER_LEDS, LEDS_PIN);
+LedStripeModi ledStripe(NUMBER_LEDS, LEDSTRIPE_PIN);
+// Adafruit_NeoPixel ledMQTT(LED_MQTT_PIN, 1, NEO_GRB + NEO_KHZ800);
 WiFiClient wifiClient;
 PubSubClient mqttClient(MQTT_SERVER, MQTT_PORT, callback, wifiClient);
 
@@ -87,15 +93,13 @@ void setup()
     // Inits
     button.init();
     ledStripe.init();
+    //ledMQTT.begin();
 }
 
 void loop()
 {
     // mqtt connection handle and loop call
-    if (!mqttClient.connected())
-    {
-        reconnect();
-    }
+    handleMQTTConnection();
     mqttClient.loop();
 
     // Handles
@@ -228,6 +232,21 @@ void callback(char *topic, byte *payload, unsigned int length)
         // publish actual speedfactor of LEDs
         publish((String)ledStripe.getSpeedfactor(), TOPIC_BALKON_LEDS_SPEEDFACTOR);
     }
+}
+
+void handleMQTTConnection()
+{
+    if (!mqttClient.connected())
+    {
+        /* ledMQTT.setPixelColor(0, ledMQTT.Color(255, 0, 0));
+        ledMQTT.show(); */
+        reconnect();
+    }
+    /* else
+    {
+        ledMQTT.setPixelColor(0, ledMQTT.Color(0, 255, 0));
+        ledMQTT.show();
+    } */
 }
 
 void publish(String payload, String topic)
