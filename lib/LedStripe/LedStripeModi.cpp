@@ -5,11 +5,11 @@
 
 /**
  * Led Stripe Modi
- * 
+ *
  * -Led stripe /w diffrent modi:
- * 
+ *
  *  1. Warm White (for relaxing Mood)
- *  2. All LEDs one choosable color 
+ *  2. All LEDs one choosable color
  *  3. Rainbow loop through Stripe (to be cool)
  *  4. Pulsing choosable color
  *  5. Sinus curve with choosable color
@@ -28,25 +28,13 @@ LedStripeModi::LedStripeModi(uint16_t numberLeds, uint16_t pin)
     Adafruit_NeoPixel ledStripe(numberLeds, pin, NEO_GRBW + NEO_KHZ800);
     this->ledStripe = ledStripe;
 
-    state = false; // set Leds off
-
+    state = false;          // set Leds off
     setColor(0, 255, 0, 0); // set default color green
-
-    brightness = 100; // equals 80% brightness
-
-    rangeMin = 0;              // default range:
-    rangeMax = numberLeds - numberLeds / 2; // [0 ... (Number of LEDs)]
-
-    mode = 0; // set default mode to WARM_WHITE
-
-    speedfactor = 20; // set speedfactor
-
-    // initialize old values same as current values
-    stateOld = state;
-    colorOld = color;
-    ledRangeMinOld = rangeMin;
-    ledRangeMaxOld = rangeMax;
-    modeOld = mode;
+    brightness = 150;       // equals 80% brightness
+    rangeMin = 0;           // default range:
+    rangeMax = numberLeds;  // [0 ... (Number of LEDs)]
+    mode = 0;               // set default mode to WARM_WHITE
+    speedfactor = 20;       // set speedfactor
 }
 
 /***************************************************
@@ -63,7 +51,7 @@ void LedStripeModi::update()
 {
     if (state)
     {
-        //if (rangeChanged()){
+        // if (rangeChanged()){
         ledStripe.clear(); // clear LEDs if range changed
         //}
 
@@ -151,7 +139,7 @@ void LedStripeModi::setRainbow()
 /* void LedStripeModi::setPulse(){
     float sinValue = sin(millis() / 1000.0 * PI) * 255;
     uint8_t hsvValue = map(sinValue, -256, 256, 20, 255);
-    
+
     uint32_t color = ledStripe.ColorHSV(map(this->color, 0, 4294967296, 0, 65536), 255, hsvValue);
     for (int i = rangeMin; i < rangeMax; i++){
         ledStripe.setPixelColor(i, color);
@@ -166,66 +154,3 @@ void LedStripeModi::setSinusCurve(){
         ledStripe.setPixelColor(i, color);
     }
 } */
-
-/***************************************************
- * Private Functions
- ***************************************************/
-bool LedStripeModi::turnedOn()
-{
-    if (!stateOld && state)
-    {
-        stateOld = state;
-        return true;
-    }
-    return false;
-}
-
-bool LedStripeModi::turnedOff()
-{
-    if (stateOld && !state)
-    {
-        stateOld = state;
-        return true;
-    }
-    return false;
-}
-
-bool LedStripeModi::colorChanged()
-{
-    if (colorOld != color)
-    {
-        this->colorOld = this->color;
-        return true;
-    }
-    return false;
-}
-
-bool LedStripeModi::brightnessChanged()
-{
-    if (ledStripe.getBrightness() != brightness)
-    {
-        return true;
-    }
-    return false;
-}
-
-bool LedStripeModi::rangeChanged()
-{
-    if (rangeMin != ledRangeMinOld || rangeMax != ledRangeMaxOld)
-    {
-        this->ledRangeMinOld = this->rangeMin;
-        this->ledRangeMaxOld = this->rangeMax;
-        return true;
-    }
-    return false;
-}
-
-bool LedStripeModi::modeChanged()
-{
-    if (modeOld != mode)
-    {
-        modeOld = mode;
-        return true;
-    }
-    return false;
-}

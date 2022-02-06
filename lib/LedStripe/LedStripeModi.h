@@ -25,20 +25,9 @@ private:
     uint8_t mode;
     uint8_t speedfactor;
 
-    uint32_t stateOld;
-    uint32_t colorOld;
-    uint8_t ledRangeMinOld;
-    uint8_t ledRangeMaxOld;
-    uint8_t modeOld;
-
     Adafruit_NeoPixel ledStripe;
 
-    bool turnedOn();
-    bool turnedOff();
-    bool colorChanged();
-    bool brightnessChanged();
-    bool rangeChanged();
-    bool modeChanged();
+    void handleModi();
 
 public:
     LedStripeModi(uint16_t numberLeds, uint16_t pin);
@@ -48,18 +37,15 @@ public:
 
     void setState(bool state)
     {
-        this->stateOld = this->state;
         this->state = state;
     };
     bool getState() { return state; };
     void setColor(uint32_t color)
     {
-        this->colorOld = this->color;
         this->color = color;
     };
     void setColor(uint8_t r, uint8_t g, uint8_t b, uint8_t w)
     {
-        this->colorOld = this->color;
         this->color = ledStripe.Color(r, g, b, w);
     };
     uint32_t getColor() { return color; };
@@ -67,19 +53,16 @@ public:
     uint8_t getBrightness() { return brightness; };
     void setLedRangeMin(uint8_t rangeMin)
     {
-        this->ledRangeMinOld = this->rangeMin;
         this->rangeMin = rangeMin;
     };
     uint8_t getRangeMin() { return rangeMin; };
     void setLedRangeMax(uint8_t rangeMax)
     {
-        this->ledRangeMaxOld = this->rangeMax;
         this->rangeMax = rangeMax;
     };
     uint8_t getRangeMax() { return rangeMax; };
     void setMode(uint8_t mode)
     {
-        this->modeOld = this->mode;
         this->mode = mode;
     };
     uint8_t getMode() { return mode; };
@@ -160,7 +143,6 @@ public:
     void on();
     void off();
 
-    void handleModi();
     void nextMode();
 
     void setWarmWhite();
